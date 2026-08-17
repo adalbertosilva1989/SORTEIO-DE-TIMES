@@ -1,4 +1,4 @@
-const CACHE = "sorteio-times-v1";
+const CACHE = "sorteio-times-v2";
 const ARQUIVOS = ["./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (e) => {
