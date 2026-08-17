@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Sorteio de Times</title>
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icon.svg" />
+<link rel="apple-touch-icon" href="./icon.svg" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0B3D24" />
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0B3D24;
+    background-image: repeating-linear-gradient(0deg, #0B3D24, #0B3D24 40px, #0E4429 40px, #0E4429 80px);
+    color: #F3F4F1;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+    padding-top: max(24px, env(safe-area-inset-top));
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 20px; }
+  .eyebrow { font-size: 13px; letter-spacing: 3px; font-weight: 700; color: #FDE68A; margin-bottom: 4px; text-transform: uppercase; }
+  h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: 0.5px; text-shadow: 0 2px 6px rgba(0,0,0,0.35); }
+  .card { background: #F7F7F2; color: #14201A; border-radius: 14px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); margin-bottom: 20px; }
+  .card h2 { margin: 0 0 14px; font-size: 17px; font-weight: 700; }
+  .row2 { display: grid; grid-template-columns: 2fr 1.2fr; gap: 10px; margin-bottom: 10px; }
+  @media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+  input[type="text"], select {
+    padding: 10px 12px; border-radius: 8px; border: 1.5px solid #D6D3C7;
+    font-size: 15px; outline: none; width: 100%; background: #fff; text-transform: uppercase;
+  }
+  select { text-transform: none; }
+  .err { border-color: #DC2626 !important; }
+  .err-msg { color: #DC2626; font-size: 13px; margin-bottom: 10px; }
+  .label-sm { font-size: 13px; color: #5B5B52; margin-bottom: 6px; }
+  .stars { display: flex; gap: 4px; }
+  .stars span { font-size: 26px; line-height: 1; cursor: pointer; color: #D6D3C7; user-select: none; }
+  .stars span.on { color: #D97706; }
+  .btnrow { display: flex; gap: 8px; }
+  .btn-primary { flex: 1; padding: 11px 14px; border-radius: 8px; border: none; background: #0F5132; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; }
+  .btn-secondary { padding: 11px 16px; border-radius: 8px; border: 1.5px solid #D6D3C7; background: #fff; color: #14201A; font-weight: 600; cursor: pointer; }
+  .list-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .link-danger { border: none; background: none; color: #991B1B; font-size: 13px; cursor: pointer; font-weight: 600; }
+  .empty { color: #8A8A7E; font-size: 14px; margin: 8px 0; }
+  .media { font-size: 12px; color: #8A8A7E; margin-bottom: 8px; }
+  .jog-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: #fff; border: 1px solid #E7E5DA; margin-bottom: 6px; }
+  .jog-item.editing { background: #EEF2E8; }
+  .pos-tag { font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 6px; min-width: 34px; text-align: center; }
+  .jog-nome { flex: 1; font-size: 15px; font-weight: 500; text-transform: uppercase; }
+  .jog-stars { font-size: 13px; font-weight: 700; color: #D97706; min-width: 70px; text-align: right; letter-spacing: 1px; }
+  .action-link { border: none; background: none; cursor: pointer; font-size: 13px; padding: 4px 6px; }
+  .action-edit { color: #5B5B52; }
+  .action-del { color: #991B1B; }
+  .config-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .config-row label { font-size: 14px; font-weight: 600; }
+  .config-row input[type="number"] { width: 56px; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #D6D3C7; font-size: 15px; text-align: center; }
+  .btn-sortear { margin-left: auto; padding: 12px 22px; border-radius: 8px; border: none; color: #fff; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; cursor: pointer; background: #D97706; }
+  .warn-inline { width: 100%; font-size: 12px; color: #991B1B; }
+  .times-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 560px) { .times-grid { grid-template-columns: 1fr; } }
+  .time-card { background: #F7F7F2; color: #14201A; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+  .time-head { color: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .time-head span.tname { font-weight: 800; font-size: 15px; letter-spacing: 0.5px; }
+  .time-head span.ttotal { font-size: 12px; opacity: 0.9; }
+  .time-body { padding: 10px 14px; }
+  .time-jog { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #E7E5DA; }
+  .time-jog:last-child { border-bottom: none; }
+  .num-circ { width: 22px; height: 22px; border-radius: 50%; background: #14201A; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .time-jog .nome { flex: 1; font-size: 14px; text-transform: uppercase; }
+  .time-jog .estrelas { font-size: 11px; font-weight: 700; color: #D97706; letter-spacing: 1px; }
+  .drive-card { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .drive-status { font-size: 12px; color: #5B5B52; flex: 1; min-width: 160px; }
+  .drive-status.on { color: #0F5132; font-weight: 600; }
+  .btn-drive { padding: 9px 14px; border-radius: 8px; border: 1.5px solid #D6D3C7; background: #fff; color: #14201A; font-weight: 600; font-size: 13px; cursor: pointer; }
+  .btn-drive.primary { background: #1E3A8A; color: #fff; border-color: #1E3A8A; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="eyebrow">Escalação do dia</div>
+    <h1>Sorteio de Times</h1>
+  </div>
+
+  <div class="card drive-card">
+    <span class="drive-status" id="drive-status">Google Drive não conectado — os dados ficam só neste aparelho.</span>
+    <button class="btn-drive primary" id="btn-conectar">Conectar Google Drive</button>
+    <button class="btn-drive" id="btn-enviar" style="display:none;">Enviar para o Drive</button>
+    <button class="btn-drive" id="btn-baixar" style="display:none;">Baixar do Drive</button>
+  </div>
+
+  <div class="card">
+    <h2 id="form-title">Adicionar jogador</h2>
+    <div class="row2">
+      <input type="text" id="input-nome" placeholder="Nome do jogador" />
+      <select id="input-posicao">
+        <option value="goleiro">Goleiro</option>
+        <option value="zagueiro">Zagueiro</option>
+        <option value="meio" selected>Meio-campo</option>
+        <option value="atacante">Atacante</option>
+      </select>
+    </div>
+    <div id="err-msg" class="err-msg" style="display:none;"></div>
+    <div style="margin-bottom:14px;">
+      <div class="label-sm">Nível do jogador</div>
+      <div class="stars" id="stars-picker"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn-primary" id="btn-salvar">Adicionar à lista</button>
+      <button class="btn-secondary" id="btn-cancelar" style="display:none;">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="list-head">
+      <h2 id="lista-titulo" style="margin:0;">Jogadores (0)</h2>
+      <button class="link-danger" id="btn-limpar" style="display:none;">Limpar lista</button>
+    </div>
+    <div id="lista-vazia" class="empty">Nenhum jogador ainda. Adicione o primeiro acima.</div>
+    <div id="media-geral" class="media" style="display:none;"></div>
+    <div id="lista-jogadores"></div>
+  </div>
+
+  <div class="card">
+    <div class="config-row">
+      <label>Número de times</label>
+      <input type="number" id="input-num-times" min="2" value="2" />
+      <button class="btn-sortear" id="btn-sortear">SORTEAR TIMES</button>
+      <div id="warn-times" class="warn-inline" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div id="resultado" class="times-grid"></div>
+</div>
+
+<script>
+/* ======= CONFIGURAÇÃO DO GOOGLE DRIVE =======
+   Troque abaixo pelo Client ID que você criar no Google Cloud Console.
+   Veja o passo a passo que enviei junto com este arquivo. */
+const GOOGLE_CLIENT_ID = "COLE_AQUI_SEU_CLIENT_ID.apps.googleusercontent.com";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const NOME_ARQUIVO_DRIVE = "sorteio-times-dados.json";
+
+let accessToken = null;
+let driveFileId = null;
+let tokenClient = null;
+
+const POSICOES = {
+  goleiro: { label: "Goleiro", curto: "GOL", cor: "#B45309", bg: "#FEF3C7" },
+  zagueiro: { label: "Zagueiro", curto: "ZAG", cor: "#1E3A8A", bg: "#DBEAFE" },
+  meio: { label: "Meio-campo", curto: "MEI", cor: "#166534", bg: "#DCFCE7" },
+  atacante: { label: "Atacante", curto: "ATA", cor: "#991B1B", bg: "#FEE2E2" },
+};
+const CORES_TIME = ["#0F5132", "#1E3A8A", "#7C2D12", "#3730A3", "#831843", "#065F46"];
+
+let jogadores = [];
+let editandoId = null;
+let notaAtual = 3;
+
+function uid() { return Math.random().toString(36).slice(2, 10); }
+
+function carregarLocal() {
+  try {
+    const salvo = localStorage.getItem("sorteio_jogadores");
+    if (salvo) jogadores = JSON.parse(salvo);
+  } catch (e) {}
+}
+
+function salvarLocal() {
+  try {
+    localStorage.setItem("sorteio_jogadores", JSON.stringify(jogadores));
+  } catch (e) {}
+}
+
+/* ======= INTEGRAÇÃO GOOGLE DRIVE ======= */
+
+function statusDrive(texto, conectado) {
+  const el = document.getElementById("drive-status");
+  el.textContent = texto;
+  el.className = "drive-status" + (conectado ? " on" : "");
+}
+
+function iniciarConexaoDrive() {
+  if (GOOGLE_CLIENT_ID.indexOf("COLE_AQUI") === 0) {
+    alert("Antes de conectar, cole o seu Client ID do Google no código (procure GOOGLE_CLIENT_ID no arquivo index.html).");
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: async (resp) => {
+      if (resp.error) {
+        statusDrive("Não foi possível conectar ao Google Drive.", false);
+        return;
+      }
+      accessToken = resp.access_token;
+      document.getElementById("btn-conectar").style.display = "none";
+      document.getElementById("btn-enviar").style.display = "inline-block";
+      document.getElementById("btn-baixar").style.display = "inline-block";
+      statusDrive("Conectado ao Google Drive.", true);
+      await localizarArquivoDrive();
+    },
+  });
+  tokenClient.requestAccessToken();
+}
+
+async function localizarArquivoDrive() {
+  const resp = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${NOME_ARQUIVO_DRIVE}' and trashed=false&fields=files(id,name)`,
+    { headers: { Authorization: "Bearer " + accessToken } }
+  );
+  const data = await resp.json();
+  if (data.files && data.files.length > 0) {
+    driveFileId = data.files[0].id;
+  }
+}
+
+async function enviarParaDrive() {
+  if (!accessToken) return;
+  const conteudo = JSON.stringify(jogadores);
+  if (!driveFileId) {
+    const metadata = { name: NOME_ARQUIVO_DRIVE, mimeType: "application/json" };
+    const form = new FormData();
+    form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+    form.append("file", new Blob([conteudo], { type: "application/json" }));
+    const resp = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + accessToken },
+      body: form,
+    });
+    const data = await resp.json();
+    driveFileId = data.id;
+  } else {
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+      method: "PATCH",
+      headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+      body: conteudo,
+    });
+  }
+  statusDrive("Lista enviada para o Google Drive.", true);
+}
+
+async function baixarDoDrive() {
+  if (!accessToken) return;
+  if (!driveFileId) await localizarArquivoDrive();
+  if (!driveFileId) {
+    statusDrive("Nenhum arquivo encontrado no Drive ainda.", true);
+    return;
+  }
+  const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+    headers: { Authorization: "Bearer " + accessToken },
+  });
+  const data = await resp.json();
+  jogadores = Array.isArray(data) ? data : [];
+  salvarLocal();
+  renderLista();
+  document.getElementById("resultado").innerHTML = "";
+  statusDrive("Lista atualizada a partir do Google Drive.", true);
+}
+
+/* ======= ESTRELAS ======= */
+
+function renderStarsPicker() {
+  const el = document.getElementById("stars-picker");
+  el.innerHTML = "";
+  for (let n = 1; n <= 5; n++) {
+    const s = document.createElement("span");
+    s.textContent = n <= notaAtual ? "★" : "☆";
+    s.className = n <= notaAtual ? "on" : "";
+    s.onclick = () => { notaAtual = n; renderStarsPicker(); };
+    el.appendChild(s);
+  }
+}
+
+function estrelasTexto(nota) {
+  return "★".repeat(nota) + "☆".repeat(5 - nota);
+}
+
+/* ======= FORMULÁRIO ======= */
+
+function limparForm() {
+  document.getElementById("input-nome").value = "";
+  document.getElementById("input-posicao").value = "meio";
+  notaAtual = 3;
+  renderStarsPicker();
+  editandoId = null;
+  document.getElementById("form-title").textContent = "Adicionar jogador";
+  document.getElementById("btn-salvar").textContent = "Adicionar à lista";
+  document.getElementById("btn-cancelar").style.display = "none";
+  document.getElementById("input-nome").classList.remove("err");
+  document.getElementById("err-msg").style.display = "none";
+}
+
+function salvarJogador() {
+  const nomeInput = document.getElementById("input-nome");
+  const nome = nomeInput.value.trim().toUpperCase();
+  const posicao = document.getElementById("input-posicao").value;
+  const errEl = document.getElementById("err-msg");
+
+  if (!nome) {
+    nomeInput.classList.add("err");
+    errEl.textContent = "Digite o nome do jogador";
+    errEl.style.display = "block";
+    return;
+  }
+
+  if (editandoId) {
+    const j = jogadores.find((x) => x.id === editandoId);
+    if (j) { j.nome = nome; j.posicao = posicao; j.nota = notaAtual; }
+  } else {
+    jogadores.push({ id: uid(), nome, posicao, nota: notaAtual });
+  }
+  salvarLocal();
+  limparForm();
+  document.getElementById("resultado").innerHTML = "";
+  renderLista();
+}
+
+function editarJogador(id) {
+  const j = jogadores.find((x) => x.id === id);
+  if (!j) return;
+  editandoId = id;
+  document.getElementById("input-nome").value = j.nome;
+  document.getElementById("input-posicao").value = j.posicao;
+  notaAtual = j.nota;
+  renderStarsPicker();
+  document.getElementById("form-title").textContent = "Editar jogador";
+  document.getElementById("btn-salvar").textContent = "Salvar alterações";
+  document.getElementById("btn-cancelar").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function removerJogador(id) {
+  jogadores = jogadores.filter((x) => x.id !== id);
+  salvarLocal();
+  if (editandoId === id) limparForm();
+  document.getElementById("resultado").innerHTML = "";
+  renderLista();
+}
+
+function limparTodos() {
+  jogadores = [];
+  salvarLocal();
+  limparForm();
+  document.getElementById("resultado").innerHTML = "";
+  renderLista();
+}
+
+function renderLista() {
+  const lista = document.getElementById("lista-jogadores");
+  const vazio = document.getElementById("lista-vazia");
+  const media = document.getElementById("media-geral");
+  const btnLimpar = document.getElementById("btn-limpar");
+  document.getElementById("lista-titulo").textContent = `Jogadores (${jogadores.length})`;
+
+  if (jogadores.length === 0) {
+    vazio.style.display = "block";
+    media.style.display = "none";
+    btnLimpar.style.display = "none";
+    lista.innerHTML = "";
+    return;
+  }
+
+  vazio.style.display = "none";
+  btnLimpar.style.display = "inline-block";
+  const somaNotas = jogadores.reduce((s, j) => s + j.nota, 0);
+  media.style.display = "block";
+  media.innerHTML = `Nível médio do grupo: <strong style="color:#14201A">${(somaNotas / jogadores.length).toFixed(1)}</strong>`;
+
+  lista.innerHTML = "";
+  jogadores.forEach((j) => {
+    const info = POSICOES[j.posicao];
+    const item = document.createElement("div");
+    item.className = "jog-item" + (editandoId === j.id ? " editing" : "");
+    item.innerHTML = `
+      <span class="pos-tag" style="color:${info.cor};background:${info.bg};">${info.curto}</span>
+      <span class="jog-nome">${j.nome}</span>
+      <span class="jog-stars">${estrelasTexto(j.nota)}</span>
+      <button class="action-link action-edit" data-id="${j.id}" data-action="editar">editar</button>
+      <button class="action-link action-del" data-id="${j.id}" data-action="remover">remover</button>
+    `;
+    lista.appendChild(item);
+  });
+
+  lista.querySelectorAll("[data-action]").forEach((btn) => {
+    btn.onclick = () => {
+      const id = btn.getAttribute("data-id");
+      if (btn.getAttribute("data-action") === "editar") editarJogador(id);
+      else removerJogador(id);
+    };
+  });
+}
+
+/* ======= SORTEIO ======= */
+
+function sortear() {
+  const numTimesInput = document.getElementById("input-num-times");
+  const numTimes = Math.max(2, Number(numTimesInput.value) || 2);
+  const warn = document.getElementById("warn-times");
+
+  if (jogadores.length < numTimes) {
+    warn.textContent = `Adicione ao menos ${numTimes} jogadores para sortear ${numTimes} times.`;
+    warn.style.display = "block";
+    return;
+  }
+  warn.style.display = "none";
+
+  const grupos = Array.from({ length: numTimes }, () => ({ jogadores: [], total: 0 }));
+  const porPosicao = {};
+  jogadores.forEach((j) => {
+    porPosicao[j.posicao] = porPosicao[j.posicao] || [];
+    porPosicao[j.posicao].push(j);
+  });
+
+  Object.values(porPosicao).forEach((lista) => {
+    for (let i = lista.length - 1; i > 0; i--) {
+      const k = Math.floor(Math.random() * (i + 1));
+      [lista[i], lista[k]] = [lista[k], lista[i]];
+    }
+    lista.sort((a, b) => b.nota - a.nota);
+  });
+
+  Object.values(porPosicao).forEach((lista) => {
+    lista.forEach((jogador) => {
+      grupos.sort((a, b) => a.total - b.total || a.jogadores.length - b.jogadores.length);
+      grupos[0].jogadores.push(jogador);
+      grupos[0].total += jogador.nota;
+    });
+  });
+
+  renderResultado(grupos);
+}
+
+function renderResultado(grupos) {
+  const container = document.getElementById("resultado");
+  container.innerHTML = "";
+  grupos.forEach((time, idx) => {
+    const cor = CORES_TIME[idx % CORES_TIME.length];
+    const card = document.createElement("div");
+    card.className = "time-card";
+    const jogadoresHtml = time.jogadores.map((j, i) => {
+      const info = POSICOES[j.posicao];
+      return `
+        <div class="time-jog">
+          <span class="num-circ">${i + 1}</span>
+          <span class="pos-tag" style="color:${info.cor};background:${info.bg};font-size:10px;">${info.curto}</span>
+          <span class="nome">${j.nome}</span>
+          <span class="estrelas">${estrelasTexto(j.nota)}</span>
+        </div>`;
+    }).join("");
+    card.innerHTML = `
+      <div class="time-head" style="background:${cor};">
+        <span class="tname">TIME ${idx + 1}</span>
+        <span class="ttotal">Nível total: ${time.total}</span>
+      </div>
+      <div class="time-body">${jogadoresHtml}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+/* ======= EVENTOS ======= */
+
+document.getElementById("btn-salvar").onclick = salvarJogador;
+document.getElementById("btn-cancelar").onclick = limparForm;
+document.getElementById("btn-limpar").onclick = limparTodos;
+document.getElementById("btn-sortear").onclick = sortear;
+document.getElementById("btn-conectar").onclick = iniciarConexaoDrive;
+document.getElementById("btn-enviar").onclick = enviarParaDrive;
+document.getElementById("btn-baixar").onclick = baixarDoDrive;
+document.getElementById("input-nome").addEventListener("input", (e) => {
+  e.target.classList.remove("err");
+  document.getElementById("err-msg").style.display = "none";
+});
+
+carregarLocal();
+renderStarsPicker();
+renderLista();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>
