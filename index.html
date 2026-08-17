@@ -46,10 +46,13 @@
   .btn-secondary { padding: 11px 16px; border-radius: 8px; border: 1.5px solid #D6D3C7; background: #fff; color: #14201A; font-weight: 600; cursor: pointer; }
   .list-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
   .link-danger { border: none; background: none; color: #991B1B; font-size: 13px; cursor: pointer; font-weight: 600; }
+  .link-marcar { border: none; background: none; color: #1E3A8A; font-size: 12px; cursor: pointer; font-weight: 600; }
   .empty { color: #8A8A7E; font-size: 14px; margin: 8px 0; }
   .media { font-size: 12px; color: #8A8A7E; margin-bottom: 8px; }
   .jog-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: #fff; border: 1px solid #E7E5DA; margin-bottom: 6px; }
   .jog-item.editing { background: #EEF2E8; }
+  .jog-item.ausente { opacity: 0.45; }
+  .chk-presente { width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
   .pos-tag { font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 6px; min-width: 34px; text-align: center; }
   .jog-nome { flex: 1; font-size: 15px; font-weight: 500; text-transform: uppercase; }
   .jog-stars { font-size: 13px; font-weight: 700; color: #D97706; min-width: 70px; text-align: right; letter-spacing: 1px; }
@@ -119,7 +122,11 @@
   <div class="card">
     <div class="list-head">
       <h2 id="lista-titulo" style="margin:0;">Jogadores (0)</h2>
-      <button class="link-danger" id="btn-limpar" style="display:none;">Limpar lista</button>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="link-marcar" id="btn-marcar-todos">marcar todos</button>
+        <button class="link-marcar" id="btn-desmarcar-todos">desmarcar todos</button>
+        <button class="link-danger" id="btn-limpar" style="display:none;">Limpar lista</button>
+      </div>
     </div>
     <div id="lista-vazia" class="empty">Nenhum jogador ainda. Adicione o primeiro acima.</div>
     <div id="media-geral" class="media" style="display:none;"></div>
@@ -167,7 +174,12 @@ function uid() { return Math.random().toString(36).slice(2, 10); }
 function carregarLocal() {
   try {
     const salvo = localStorage.getItem("sorteio_jogadores");
-    if (salvo) jogadores = JSON.parse(salvo);
+    if (salvo) {
+      jogadores = JSON.parse(salvo).map((j) => ({
+        presente: true,
+        ...j,
+      }));
+    }
   } catch (e) {}
 }
 
@@ -313,7 +325,7 @@ function salvarJogador() {
     const j = jogadores.find((x) => x.id === editandoId);
     if (j) { j.nome = nome; j.posicao = posicao; j.nota = notaAtual; }
   } else {
-    jogadores.push({ id: uid(), nome, posicao, nota: notaAtual });
+    jogadores.push({ id: uid(), nome, posicao, nota: notaAtual, presente: true });
   }
   salvarLocal();
   limparForm();
@@ -351,11 +363,27 @@ function limparTodos() {
   renderLista();
 }
 
+function togglePresente(id) {
+  const j = jogadores.find((x) => x.id === id);
+  if (j) j.presente = !j.presente;
+  salvarLocal();
+  document.getElementById("resultado").innerHTML = "";
+  renderLista();
+}
+
+function marcarTodos(valor) {
+  jogadores.forEach((j) => { j.presente = valor; });
+  salvarLocal();
+  document.getElementById("resultado").innerHTML = "";
+  renderLista();
+}
+
 function renderLista() {
   const lista = document.getElementById("lista-jogadores");
   const vazio = document.getElementById("lista-vazia");
   const media = document.getElementById("media-geral");
   const btnLimpar = document.getElementById("btn-limpar");
+  const presentes = jogadores.filter((j) => j.presente);
   document.getElementById("lista-titulo").textContent = `Jogadores (${jogadores.length})`;
 
   if (jogadores.length === 0) {
@@ -368,16 +396,19 @@ function renderLista() {
 
   vazio.style.display = "none";
   btnLimpar.style.display = "inline-block";
-  const somaNotas = jogadores.reduce((s, j) => s + j.nota, 0);
+  const somaNotas = presentes.reduce((s, j) => s + j.nota, 0);
   media.style.display = "block";
-  media.innerHTML = `Nível médio do grupo: <strong style="color:#14201A">${(somaNotas / jogadores.length).toFixed(1)}</strong>`;
+  media.innerHTML = presentes.length
+    ? `Presentes hoje: <strong style="color:#14201A">${presentes.length} de ${jogadores.length}</strong> · Nível médio dos presentes: <strong style="color:#14201A">${(somaNotas / presentes.length).toFixed(1)}</strong>`
+    : `Presentes hoje: <strong style="color:#14201A">0 de ${jogadores.length}</strong> — marque quem vai jogar`;
 
   lista.innerHTML = "";
   jogadores.forEach((j) => {
     const info = POSICOES[j.posicao];
     const item = document.createElement("div");
-    item.className = "jog-item" + (editandoId === j.id ? " editing" : "");
+    item.className = "jog-item" + (editandoId === j.id ? " editing" : "") + (j.presente ? "" : " ausente");
     item.innerHTML = `
+      <input type="checkbox" class="chk-presente" data-id="${j.id}" ${j.presente ? "checked" : ""} />
       <span class="pos-tag" style="color:${info.cor};background:${info.bg};">${info.curto}</span>
       <span class="jog-nome">${j.nome}</span>
       <span class="jog-stars">${estrelasTexto(j.nota)}</span>
@@ -394,6 +425,10 @@ function renderLista() {
       else removerJogador(id);
     };
   });
+
+  lista.querySelectorAll(".chk-presente").forEach((chk) => {
+    chk.onclick = () => togglePresente(chk.getAttribute("data-id"));
+  });
 }
 
 /* ======= SORTEIO ======= */
@@ -402,22 +437,37 @@ function sortear() {
   const numTimesInput = document.getElementById("input-num-times");
   const numTimes = Math.max(2, Number(numTimesInput.value) || 2);
   const warn = document.getElementById("warn-times");
+  const presentes = jogadores.filter((j) => j.presente);
 
-  if (jogadores.length < numTimes) {
-    warn.textContent = `Adicione ao menos ${numTimes} jogadores para sortear ${numTimes} times.`;
+  if (presentes.length < numTimes) {
+    warn.textContent = `Marque ao menos ${numTimes} jogadores como presentes para sortear ${numTimes} times.`;
     warn.style.display = "block";
     return;
   }
   warn.style.display = "none";
 
   const grupos = Array.from({ length: numTimes }, () => ({ jogadores: [], total: 0 }));
+  // embaralha a ordem dos times para o desempate (times com total igual) não
+  // cair sempre nos mesmos dois times, o que travava sempre os mesmos goleiros
+  for (let i = grupos.length - 1; i > 0; i--) {
+    const k = Math.floor(Math.random() * (i + 1));
+    [grupos[i], grupos[k]] = [grupos[k], grupos[i]];
+  }
+
   const porPosicao = {};
-  jogadores.forEach((j) => {
+  presentes.forEach((j) => {
     porPosicao[j.posicao] = porPosicao[j.posicao] || [];
     porPosicao[j.posicao].push(j);
   });
 
-  Object.values(porPosicao).forEach((lista) => {
+  // também embaralha a ordem em que as posições são processadas
+  const posicoesEmbaralhadas = Object.values(porPosicao);
+  for (let i = posicoesEmbaralhadas.length - 1; i > 0; i--) {
+    const k = Math.floor(Math.random() * (i + 1));
+    [posicoesEmbaralhadas[i], posicoesEmbaralhadas[k]] = [posicoesEmbaralhadas[k], posicoesEmbaralhadas[i]];
+  }
+
+  posicoesEmbaralhadas.forEach((lista) => {
     for (let i = lista.length - 1; i > 0; i--) {
       const k = Math.floor(Math.random() * (i + 1));
       [lista[i], lista[k]] = [lista[k], lista[i]];
@@ -425,7 +475,7 @@ function sortear() {
     lista.sort((a, b) => b.nota - a.nota);
   });
 
-  Object.values(porPosicao).forEach((lista) => {
+  posicoesEmbaralhadas.forEach((lista) => {
     lista.forEach((jogador) => {
       grupos.sort((a, b) => a.total - b.total || a.jogadores.length - b.jogadores.length);
       grupos[0].jogadores.push(jogador);
@@ -469,6 +519,8 @@ function renderResultado(grupos) {
 document.getElementById("btn-salvar").onclick = salvarJogador;
 document.getElementById("btn-cancelar").onclick = limparForm;
 document.getElementById("btn-limpar").onclick = limparTodos;
+document.getElementById("btn-marcar-todos").onclick = () => marcarTodos(true);
+document.getElementById("btn-desmarcar-todos").onclick = () => marcarTodos(false);
 document.getElementById("btn-sortear").onclick = sortear;
 document.getElementById("btn-conectar").onclick = iniciarConexaoDrive;
 document.getElementById("btn-enviar").onclick = enviarParaDrive;
